@@ -2,9 +2,11 @@ name: Android CI
 
 on:
   push:
-    branches: [ main, integration/github_actions ]
+    branches:
+      - '**'       # Run on all branches
   pull_request:
-    branches: [ main, integration/github_actions ]
+    branches:
+      - '**'       # Run for PRs targeting any branch
   release:
     types: [ created ]
 
