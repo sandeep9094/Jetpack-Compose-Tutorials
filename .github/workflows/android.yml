@@ -13,14 +13,23 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
-    container:
-      image: gradle:8.9-jdk17
-
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Cache Gradle packages
+      # Explicitly set up Java 17, which is required for modern Android/Gradle builds
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          java-version: '17'
+          distribution: 'temurin'
+          # Use the Gradle cache feature to speed up subsequent runs
+          cache: 'gradle'
+
+      # NOTE: With cache: 'gradle' above, you may not need the following cache step,
+      # but keeping it for completeness if you prefer explicit control.
+      # If you use the setup-java cache, you can remove this block.
+      - name: Cache Gradle packages (Fallback/Explicit)
         uses: actions/cache@v4
         with:
           path: |
@@ -31,10 +40,12 @@ jobs:
             ${{ runner.os }}-gradle-
 
       - name: Grant execute permission for gradlew
+        # This is crucial for running the wrapper script
         run: chmod +x gradlew
 
       - name: Build with Gradle
-        run: ./gradlew build -x test --stacktrace
+        # Running the 'clean' task first can sometimes prevent build cache issues
+        run: ./gradlew clean build -x test --stacktrace
 
       - name: Upload build artifacts
         uses: actions/upload-artifact@v4
@@ -44,22 +55,16 @@ jobs:
 
   test:
     runs-on: ubuntu-latest
-    container:
-      image: gradle:8.5-jdk17
-
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Cache Gradle packages
-        uses: actions/cache@v3
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
         with:
-          path: |
-            ~/.gradle/caches
-            ~/.gradle/wrapper
-          key: ${{ runner.os }}-gradle-${{ hashFiles('**/*.gradle*', '**/gradle-wrapper.properties') }}
-          restore-keys: |
-            ${{ runner.os }}-gradle-
+          java-version: '17'
+          distribution: 'temurin'
+          cache: 'gradle'
 
       - name: Grant execute permission for gradlew
         run: chmod +x gradlew
