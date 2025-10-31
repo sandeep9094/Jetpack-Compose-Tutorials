@@ -12,7 +12,7 @@ jobs:
   build:
     runs-on: ubuntu-latest
     container:
-      image: gradle:8.7-jdk17
+      image: gradle:8.9-jdk17
     steps:
       - uses: actions/checkout@v4
       - name: Build with Gradle
