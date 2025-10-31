@@ -2,9 +2,11 @@ name: Android CI
 
 on:
   push:
-    branches: [ "master" ]
+    branches:
+      - '**'       # Run on all branches
   pull_request:
-    branches: [ "master" ]
+    branches:
+      - '**'       # Run for PRs targeting any branch
 
 jobs:
   build:
