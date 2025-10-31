@@ -2,18 +2,115 @@ name: Android CI
 
 on:
   push:
-    branches:
-      - '**'       # Run on all branches
+    branches: [ main, integration/github_actions ]
   pull_request:
-    branches:
-      - '**'       # Run for PRs targeting any branch
+    branches: [ main, integration/github_actions ]
+  release:
+    types: [ created ]
 
 jobs:
   build:
     runs-on: ubuntu-latest
     container:
       image: gradle:8.9-jdk17
+
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Cache Gradle packages
+        uses: actions/cache@v3
+        with:
+          path: |
+            ~/.gradle/caches
+            ~/.gradle/wrapper
+          key: ${{ runner.os }}-gradle-${{ hashFiles('**/*.gradle*', '**/gradle-wrapper.properties') }}
+          restore-keys: |
+            ${{ runner.os }}-gradle-
+
+      - name: Grant execute permission for gradlew
+        run: chmod +x gradlew
+
       - name: Build with Gradle
-        run: gradle build
+        run: ./gradlew build -x test --stacktrace
+
+      - name: Upload build artifacts
+        uses: actions/upload-artifact@v3
+        with:
+          name: build-outputs
+          path: app/build/outputs/
+
+  test:
+    runs-on: ubuntu-latest
+    container:
+      image: gradle:8.5-jdk17
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Cache Gradle packages
+        uses: actions/cache@v3
+        with:
+          path: |
+            ~/.gradle/caches
+            ~/.gradle/wrapper
+          key: ${{ runner.os }}-gradle-${{ hashFiles('**/*.gradle*', '**/gradle-wrapper.properties') }}
+          restore-keys: |
+            ${{ runner.os }}-gradle-
+
+      - name: Grant execute permission for gradlew
+        run: chmod +x gradlew
+
+      - name: Run unit tests
+        run: ./gradlew test --stacktrace
+
+      - name: Upload test reports
+        uses: actions/upload-artifact@v3
+        if: always()
+        with:
+          name: test-reports
+          path: app/build/reports/tests/
+
+  # Future job for APK generation on releases
+#  generate-apk:
+#    if: github.event_name == 'release'
+#    needs: [build, test]
+#    runs-on: ubuntu-latest
+#    container:
+#      image: gradle:8.5-jdk17
+#
+#    steps:
+#      - name: Checkout code
+#        uses: actions/checkout@v4
+#
+#      - name: Cache Gradle packages
+#        uses: actions/cache@v3
+#        with:
+#          path: |
+#            ~/.gradle/caches
+#            ~/.gradle/wrapper
+#          key: ${{ runner.os }}-gradle-${{ hashFiles('**/*.gradle*', '**/gradle-wrapper.properties') }}
+#          restore-keys: |
+#            ${{ runner.os }}-gradle-
+#
+#      - name: Grant execute permission for gradlew
+#        run: chmod +x gradlew
+#
+#      - name: Build Release APK
+#        run: ./gradlew assembleRelease --stacktrace
+#
+#      - name: Sign APK (Optional - requires secrets)
+#        run: |
+#          # Add signing configuration here if needed
+#          echo "APK signing step - configure with your keystore"
+#
+#      - name: Upload APK to Release
+#        uses: actions/upload-release-asset@v1
+#        env:
+#          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+#        with:
+#          upload_url: ${{ github.event.release.upload_url }}
+#          asset_path: app/build/outputs/apk/release/app-release.apk
+#          asset_name: app-release.apk
+#          asset_content_type: application/vnd.android.package-archive
